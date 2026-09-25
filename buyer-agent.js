@@ -16,8 +16,44 @@ const BUYER_MAILBOX_ID = '4a97705e-77a1-4dd2-8644-18e86360dc09'; // Mermail publ
 const BUYER_EMAIL = 'rewardcourt@mermail.app';
 const POLL_INTERVAL_MS = 8000; // 8 seconds poll interval (under Mermail 15 req/min limit)
 
-// Natural language instruction string (defaults to test instruction, can be overridden via env var or CLI arg)
-const INSTRUCTION = process.env.BUYER_INSTRUCTION || process.argv[2] || "Negotiate with vendor.negotiator11@gmail.com for 100 units of Widget X, budget cap $50";
+const DEFAULT_INSTRUCTION = "Negotiate with vendor.negotiator11@gmail.com for 100 units of Widget X, budget cap $50";
+
+/**
+ * Extract natural language negotiation instruction from command-line arguments or environment variables.
+ * Supports:
+ * - Direct single argument: node buyer-agent.js "Negotiate with vendor..."
+ * - Multiple unquoted arguments: node buyer-agent.js Negotiate with vendor...
+ * - Flag argument: node buyer-agent.js --instruction "Negotiate with vendor..." or -i "..."
+ * - Environment variable: process.env.BUYER_INSTRUCTION
+ */
+function getCommandLineInstruction(argv = process.argv) {
+  if (process.env.BUYER_INSTRUCTION && process.env.BUYER_INSTRUCTION.trim().length > 0) {
+    return process.env.BUYER_INSTRUCTION.trim();
+  }
+  const args = argv.slice(2);
+  if (!args || args.length === 0) {
+    return null;
+  }
+  for (let i = 0; i < args.length; i++) {
+    if (args[i].startsWith('--instruction=')) {
+      return args[i].substring('--instruction='.length).trim();
+    }
+    if ((args[i] === '--instruction' || args[i] === '-i') && args[i + 1]) {
+      return args[i + 1].trim();
+    }
+  }
+  if (args.length === 1 && args[0].trim().length > 0) {
+    return args[0].trim();
+  }
+  const nonFlagArgs = args.filter((a) => !a.startsWith('-'));
+  if (nonFlagArgs.length > 0) {
+    return nonFlagArgs.join(' ').trim();
+  }
+  return args.join(' ').trim();
+}
+
+// Natural language instruction string (defaults to test instruction, can be overridden via CLI arg or env var)
+const INSTRUCTION = getCommandLineInstruction() || DEFAULT_INSTRUCTION;
 
 /**
  * Simple regex/string parsing for natural-language negotiation instructions.
@@ -1078,6 +1114,8 @@ module.exports = {
   DEFAULT_PRODUCT_NAME,
   DEFAULT_STARTING_OFFER,
   DEFAULT_MAX_ROUNDS,
+  DEFAULT_INSTRUCTION,
+  getCommandLineInstruction,
   INSTRUCTION,
   PRODUCT_NAME,
   parseInstruction,
@@ -1109,7 +1147,9 @@ module.exports = {
 };
 
 if (require.main === module) {
-  runBuyerAgent().catch((err) => {
+  const cliInstruction = getCommandLineInstruction();
+  const options = cliInstruction ? { instruction: cliInstruction } : {};
+  runBuyerAgent(options).catch((err) => {
     console.error('[Buyer Agent] Fatal error:', err);
     process.exit(1);
   });

@@ -15,6 +15,8 @@ const {
   VENDOR_EMAIL,
   PRODUCT_NAME,
   INSTRUCTION,
+  DEFAULT_INSTRUCTION,
+  getCommandLineInstruction,
   DEFAULT_BUDGET_CAP,
   DEFAULT_UNITS,
   DEFAULT_VENDOR_EMAIL,
@@ -653,5 +655,39 @@ test('Instruction Parsing: runBuyerAgent accepts natural language instruction an
       fs.rmSync(tempTranscriptsDir, { recursive: true, force: true });
     }
   }
+});
+
+test('CLI Arguments: getCommandLineInstruction handles single quoted argument, unquoted arguments, and flags', () => {
+  // 1. Single quoted argument
+  const singleArg = ['node', 'buyer-agent.js', 'Negotiate with test@vendor.com for 50 units of Widget Z, budget cap $25'];
+  assert.equal(
+    getCommandLineInstruction(singleArg),
+    'Negotiate with test@vendor.com for 50 units of Widget Z, budget cap $25'
+  );
+
+  // 2. Unquoted multiple arguments
+  const multiArgs = ['node', 'buyer-agent.js', 'Negotiate', 'with', 'test@vendor.com', 'for', '50', 'units', 'of', 'Widget', 'Z,', 'budget', 'cap', '$25'];
+  assert.equal(
+    getCommandLineInstruction(multiArgs),
+    'Negotiate with test@vendor.com for 50 units of Widget Z, budget cap $25'
+  );
+
+  // 3. Flag argument --instruction
+  const flagArgs = ['node', 'buyer-agent.js', '--instruction', 'Negotiate with test@vendor.com for 20 units'];
+  assert.equal(
+    getCommandLineInstruction(flagArgs),
+    'Negotiate with test@vendor.com for 20 units'
+  );
+
+  // 4. Flag argument --instruction=...
+  const equalsFlagArgs = ['node', 'buyer-agent.js', '--instruction=Negotiate with test@vendor.com for 20 units'];
+  assert.equal(
+    getCommandLineInstruction(equalsFlagArgs),
+    'Negotiate with test@vendor.com for 20 units'
+  );
+
+  // 5. Empty arguments returns null
+  const emptyArgs = ['node', 'buyer-agent.js'];
+  assert.equal(getCommandLineInstruction(emptyArgs), null);
 });
 
