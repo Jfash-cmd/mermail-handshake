@@ -1,0 +1,21 @@
+{
+  "name": "mermail-handshake",
+  "version": "1.0.0",
+  "description": "Automated email negotiation responder for vendor bot",
+  "main": "vendor-bot.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node vendor-bot.js",
+    "dashboard": "node server.js",
+    "test": "node --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "imapflow": "^1.0.171",
+    "mailparser": "^3.7.2",
+    "nodemailer": "^6.10.0"
+  }
+}

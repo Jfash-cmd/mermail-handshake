@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mermail Handshake | Autonomous Buyer Agent Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ==========================================================================
+       RESET & THEME VARIABLES
+       ========================================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-base: #0a0a0a;
+      --bg-surface: #111113;
+      --bg-surface-elevated: #161619;
+      --bg-surface-card: #141416;
+      --bg-code: #070709;
+      
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-medium: rgba(255, 255, 255, 0.14);
+      --border-accent: rgba(255, 255, 255, 0.25);
+      
+      --text-white: #ffffff;
+      --text-heading: #f4f4f5;
+      --text-body: #d4d4d8;
+      --text-muted: #71717a;
+      --text-dim: #52525b;
+
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.25);
+      --emerald-subtle: rgba(16, 185, 129, 0.12);
+      
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.25);
+      --amber-subtle: rgba(245, 158, 11, 0.12);
+
+      --blue: #38bdf8;
+      --blue-glow: rgba(56, 189, 248, 0.25);
+      --blue-subtle: rgba(56, 189, 248, 0.12);
+
+      --rose: #f43f5e;
+      --rose-glow: rgba(244, 63, 94, 0.25);
+      --rose-subtle: rgba(244, 63, 94, 0.12);
+
+      --radius-pill: 9999px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 8px;
+
+      --shadow-elevated: 0 16px 36px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border-subtle);
+      --shadow-pill: 0 4px 14px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--border-subtle);
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-body);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      position: relative;
+    }
+
+    /* Subtle grain/noise texture overlay */
+    .grain-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 1000;
+      opacity: 0.042;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+
+    /* Ambient spotlight radial gradient */
+    .spotlight {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1000px;
+      height: 480px;
+      background: radial-gradient(ellipse 65% 55% at 50% 0%, rgba(255, 255, 255, 0.07), transparent 70%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Container */
+    .app-container {
+      position: relative;
+      z-index: 2;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px 64px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* ==========================================================================
+       HEADER & NAVIGATION
+       ========================================================================== */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo-pill {
+      background: #141417;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-pill);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.08), var(--shadow-pill);
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+
+    .brand-logo-pill:hover {
+      border-color: rgba(255, 255, 255, 0.35);
+      box-shadow: 0 0 24px rgba(255, 255, 255, 0.16), var(--shadow-pill);
+    }
+
+    .handshake-icon {
+      stroke: #ffffff;
+      color: #ffffff;
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.25));
+    }
+
+    .brand-text h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text-white);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .brand-text p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .header-badges {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* ==========================================================================
+       PILL COMPONENTS
+       ========================================================================== */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      background: var(--bg-surface-elevated);
+      color: var(--text-heading);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-pill);
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .pill-clickable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .pill-clickable:hover {
+      border-color: var(--border-medium);
+      background: #1a1a1e;
+      transform: translateY(-1px);
+    }
+
+    .pill-clickable:active {
+      transform: translateY(0);
+    }
+
+    .pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .pill-dot.dot-idle {
+      background-color: #71717a;
+      box-shadow: 0 0 8px rgba(113, 113, 122, 0.5);
+    }
+
+    .pill-dot.dot-running {
+      background-color: var(--amber);
+      box-shadow: 0 0 10px var(--amber-glow);
+      animation: pulse-dot 1.4s infinite ease-in-out;
+    }
+
+    .pill-dot.dot-success {
+      background-color: var(--emerald);
+      box-shadow: 0 0 12px var(--emerald-glow);
+    }
+
+    .pill-dot.dot-error {
+      background-color: var(--rose);
+      box-shadow: 0 0 10px var(--rose-glow);
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.6; }
+    }
+
+    /* ==========================================================================
+       HERO & CONTROL SECTION
+       ========================================================================== */
+    .hero-section {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .hero-banner {
+      position: relative;
+      border-radius: var(--radius-lg);
+      padding: 44px 36px 40px 36px;
+      overflow: hidden;
+      border: 1px solid var(--border-medium);
+      box-shadow: var(--shadow-elevated);
+      background: #0e0e11;
+    }
+
+    .hero-banner-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(
+        ellipse 90% 70% at 50% 30%,
+        rgba(30, 30, 36, 0.45) 0%,
+        rgba(14, 14, 17, 0.85) 65%,
+        #0e0e11 100%
+      );
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Left and Right Animated Robotic Hands */
+    .hand-container {
+      position: absolute;
+      pointer-events: none;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+
+    .hand-container-left {
+      right: calc(50% - 5px);
+      top: calc(50% + 18px);
+      width: 520px;
+      max-width: 50%;
+      animation: reachLeftHand 7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+    }
+
+    .hand-container-right {
+      left: calc(50% - 5px);
+      top: calc(50% - 19px);
+      width: 580px;
+      max-width: 54%;
+      animation: reachRightHand 7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+    }
+
+    .hand-img {
+      width: 100%;
+      height: auto;
+      display: block;
+      filter: brightness(1.15) blur(1.5px);
+      transform: translateZ(0);
+    }
+
+    /* Looping animation:
+       1. Start apart at resting distance (0%)
+       2. Slowly moves inward until fingertips meet and touch at the center (42%)
+       3. Holds briefly at the touching point (42% -> 58%)
+       4. Slowly moves back apart (58% -> 100%)
+       5. Repeats infinitely with smooth sine curve
+    */
+    @keyframes reachLeftHand {
+      0% {
+        transform: translateY(-50%) translateX(-120px);
+        filter: brightness(1.15) blur(1.5px);
+      }
+      42% {
+        transform: translateY(-50%) translateX(0);
+        filter: brightness(1.22) blur(1.5px) drop-shadow(0 0 25px rgba(56, 189, 248, 0.22));
+      }
+      58% {
+        transform: translateY(-50%) translateX(0);
+        filter: brightness(1.22) blur(1.5px) drop-shadow(0 0 25px rgba(56, 189, 248, 0.22));
+      }
+      100% {
+        transform: translateY(-50%) translateX(-120px);
+        filter: brightness(1.15) blur(1.5px);
+      }
+    }
+
+    @keyframes reachRightHand {
+      0% {
+        transform: translateY(-50%) translateX(120px);
+        filter: brightness(1.15) blur(1.5px);
+      }
+      42% {
+        transform: translateY(-50%) translateX(0);
+        filter: brightness(1.22) blur(1.5px) drop-shadow(0 0 25px rgba(245, 158, 11, 0.22));
+      }
+      58% {
+        transform: translateY(-50%) translateX(0);
+        filter: brightness(1.22) blur(1.5px) drop-shadow(0 0 25px rgba(245, 158, 11, 0.22));
+      }
+      100% {
+        transform: translateY(-50%) translateX(120px);
+        filter: brightness(1.15) blur(1.5px);
+      }
+    }
+
+    .hero-banner-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(
+        ellipse 70% 80% at 50% 50%,
+        rgba(14, 14, 17, 0.70) 0%,
+        rgba(14, 14, 17, 0.82) 55%,
+        rgba(10, 10, 12, 0.94) 100%
+      );
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .hero-banner-content {
+      position: relative;
+      z-index: 4;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .super-title-pill {
+      align-self: flex-start;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(6px);
+      color: #f4f4f5;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.09em;
+      padding: 5px 12px;
+      font-weight: 700;
+    }
+
+    .hero-headline {
+      font-size: clamp(2.2rem, 4.5vw, 3.2rem);
+      font-weight: 900;
+      color: var(--text-white);
+      letter-spacing: -0.04em;
+      line-height: 1.1;
+      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.95), 0 0 40px rgba(0, 0, 0, 0.8);
+    }
+
+    .hero-subtext {
+      font-size: 1.05rem;
+      color: #e4e4e7;
+      max-width: 760px;
+      line-height: 1.6;
+      text-shadow: 0 1px 10px rgba(0, 0, 0, 0.9);
+    }
+
+    /* Control Box */
+    .control-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: var(--shadow-elevated);
+      position: relative;
+    }
+
+    .instruction-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .section-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .parsed-chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-pill);
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #e4e4e7;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chip strong {
+      color: var(--text-white);
+      font-weight: 700;
+    }
+
+    .chip.chip-accent {
+      background: rgba(56, 189, 248, 0.08);
+      border-color: rgba(56, 189, 248, 0.25);
+      color: #bae6fd;
+    }
+
+    .chip-buyer {
+      background: rgba(56, 189, 248, 0.1);
+      border-color: rgba(56, 189, 248, 0.3);
+      color: #bae6fd;
+    }
+
+    .chip-vendor {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: #fde68a;
+    }
+
+    .counterparties-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 2px 0 6px 0;
+    }
+
+    .party-pill {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-medium);
+      padding: 8px 16px;
+      font-size: 0.88rem;
+    }
+
+    .party-sub {
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-left: 2px;
+    }
+
+    .counterparties-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+
+    /* Input area */
+    .input-wrapper {
+      position: relative;
+    }
+
+    .instruction-input {
+      width: 100%;
+      background: #0d0d0f;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      color: var(--text-white);
+      font-size: 1.05rem;
+      font-family: inherit;
+      font-weight: 500;
+      line-height: 1.5;
+      resize: vertical;
+      min-height: 76px;
+      transition: all 0.2s ease;
+    }
+
+    .instruction-input:focus {
+      outline: none;
+      border-color: var(--text-white);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+      background: #111114;
+    }
+
+    /* Action bar */
+    .action-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .action-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Start Button - High Contrast Bold Pill */
+    .btn-start {
+      background: #ffffff;
+      color: #0a0a0a;
+      border: none;
+      border-radius: var(--radius-pill);
+      padding: 14px 34px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 0 24px rgba(255, 255, 255, 0.25), 0 4px 12px rgba(0, 0, 0, 0.6);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+
+    .btn-start:hover:not(:disabled) {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 0 32px rgba(255, 255, 255, 0.4), 0 6px 16px rgba(0, 0, 0, 0.7);
+    }
+
+    .btn-start:active:not(:disabled) {
+      transform: translateY(0) scale(0.99);
+    }
+
+    .btn-start:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .btn-stop {
+      background: #1c1917;
+      color: #fca5a5;
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      border-radius: var(--radius-pill);
+      padding: 12px 24px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-stop:hover {
+      background: rgba(244, 63, 94, 0.15);
+      border-color: var(--rose);
+    }
+
+    .action-presets {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .preset-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ==========================================================================
+       FINAL SUMMARY PANEL (HIGHLIGHT ON FINISH)
+       ========================================================================== */
+    .summary-card {
+      background: linear-gradient(180deg, #161619 0%, #111113 100%);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      box-shadow: var(--shadow-elevated);
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      position: relative;
+      overflow: hidden;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .summary-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #10b981, #38bdf8, #818cf8);
+    }
+
+    .summary-header-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .summary-title-area {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .summary-super {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--emerald);
+    }
+
+    /* The user requested bold heading style for main result */
+    .summary-main-heading {
+      font-size: clamp(2.4rem, 5vw, 3.5rem);
+      font-weight: 900;
+      color: var(--text-white);
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      text-transform: uppercase;
+    }
+
+    .summary-main-heading.status-accepted {
+      color: #ffffff;
+      text-shadow: 0 0 30px rgba(16, 185, 129, 0.4);
+    }
+
+    .summary-main-heading.status-walkaway {
+      color: #ffffff;
+      text-shadow: 0 0 30px rgba(244, 63, 94, 0.4);
+    }
+
+    .summary-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-transcript {
+      background: #ffffff;
+      color: #0a0a0a;
+      text-decoration: none;
+      padding: 10px 22px;
+      border-radius: var(--radius-pill);
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .btn-transcript:hover {
+      background: #f4f4f5;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-view-modal {
+      background: var(--bg-surface-elevated);
+      color: var(--text-white);
+      padding: 10px 20px;
+      border-radius: var(--radius-pill);
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: 1px solid var(--border-medium);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-view-modal:hover {
+      background: #202025;
+      border-color: var(--text-white);
+    }
+
+    /* Key metrics grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+    }
+
+    .metric-pill-card {
+      background: var(--bg-surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .metric-pill-card:hover {
+      border-color: var(--border-medium);
+      background: #18181b;
+    }
+
+    .metric-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .metric-value {
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: var(--text-white);
+      letter-spacing: -0.03em;
+    }
+
+    .metric-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .metric-sub.highlight-positive {
+      color: var(--emerald);
+      font-weight: 700;
+    }
+
+    /* ==========================================================================
+       LIVE LOG PANEL
+       ========================================================================== */
+    .log-panel-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-elevated);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .log-header {
+      padding: 16px 22px;
+      background: #0d0d0f;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .log-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mac-dots {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mac-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .mac-dot.dot-red { background: #ef4444; opacity: 0.8; }
+    .mac-dot.dot-yellow { background: #f59e0b; opacity: 0.8; }
+    .mac-dot.dot-green { background: #10b981; opacity: 0.8; }
+
+    .log-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-heading);
+    }
+
+    .log-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .log-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-body);
+      border-radius: var(--radius-pill);
+      padding: 5px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .log-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-white);
+    }
+
+    .log-body {
+      background: var(--bg-code);
+      padding: 20px;
+      font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+      font-size: 0.86rem;
+      line-height: 1.65;
+      min-height: 380px;
+      max-height: 520px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #e4e4e7;
+      scroll-behavior: smooth;
+    }
+
+    /* Custom Scrollbar */
+    .log-body::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .log-body::-webkit-scrollbar-track {
+      background: #09090b;
+    }
+
+    .log-body::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 4px;
+    }
+
+    .log-body::-webkit-scrollbar-thumb:hover {
+      background: #3f3f46;
+    }
+
+    .log-line {
+      margin-bottom: 2px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .log-line.stream-stderr {
+      color: #fca5a5;
+    }
+
+    .log-line-banner {
+      color: #ffffff;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 2px 6px;
+      border-left: 2px solid var(--emerald);
+      margin: 4px 0;
+    }
+
+    .log-tag-agent {
+      color: #93c5fd;
+      font-weight: 600;
+    }
+
+    .log-tag-time {
+      color: #52525b;
+      font-size: 0.76rem;
+      user-select: none;
+    }
+
+    .log-highlight-offer {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    .log-highlight-counter {
+      color: #fbbf24;
+      font-weight: 600;
+    }
+
+    .log-highlight-accept {
+      color: #34d399;
+      font-weight: 700;
+    }
+
+    /* Empty state */
+    .log-empty {
+      color: var(--text-dim);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 280px;
+      gap: 12px;
+      text-align: center;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .log-empty-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-pill);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+
+    /* ==========================================================================
+       MODAL STYLES (TRANSCRIPT VIEWER)
+       ========================================================================== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(8px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .modal-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 820px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h3 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text-white);
+      letter-spacing: -0.02em;
+    }
+
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: #e4e4e7;
+      background: #0d0d0f;
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      background: var(--bg-surface);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Noise texture overlay -->
+  <div class="grain-overlay"></div>
+  <!-- Ambient spotlight -->
+  <div class="spotlight"></div>
+
+  <div class="app-container">
+    <!-- Top Bar -->
+    <header>
+      <div class="brand-wrap">
+        <div class="brand-logo-pill" aria-label="Handshake Logo">
+          <svg class="handshake-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m11 17 2 2a1 1 0 0 0 1.4 0l4.3-4.3a1 1 0 0 0 0-1.4l-2.6-2.6a1 1 0 0 0-1.4 0l-1.4 1.4"/>
+            <path d="m18 10 3.3-3.3a1 1 0 0 0 0-1.4l-2.6-2.6a1 1 0 0 0-1.4 0L14 6"/>
+            <path d="m2 14 3.3 3.3a1 1 0 0 0 1.4 0l2.6-2.6a1 1 0 0 0 0-1.4L6 10"/>
+            <path d="m14 6-2-2a1 1 0 0 0-1.4 0L6.3 8.3a1 1 0 0 0 0 1.4l2.6 2.6a1 1 0 0 0 1.4 0l1.4-1.4"/>
+            <path d="m13 13 1 1"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Mermail Handshake</h1>
+          <p>Autonomous Agent Negotiation Protocol</p>
+        </div>
+      </div>
+      <div class="header-badges">
+        <div class="pill">
+          <span class="pill-dot dot-success"></span>
+          <span>Mermail Wallet: <strong>ACTIVE</strong></span>
+        </div>
+        <div class="pill" id="agentStatusPill">
+          <span class="pill-dot dot-idle" id="statusDot"></span>
+          <span id="statusLabel">Agent: <strong>IDLE</strong></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero / Headline -->
+    <section class="hero-section">
+      <div class="hero-banner">
+        <div class="hero-banner-bg"></div>
+
+        <!-- Left Animated Robotic Hand (Creation of Adam) -->
+        <div class="hand-container hand-container-left">
+          <img src="/assets/hand-left.png" alt="Left Robotic Hand" class="hand-img" />
+        </div>
+
+        <!-- Right Animated Robotic Hand (Creation of Adam) -->
+        <div class="hand-container hand-container-right">
+          <img src="/assets/hand-right.png" alt="Right Robotic Hand" class="hand-img" />
+        </div>
+
+        <div class="hero-banner-overlay"></div>
+        <div class="hero-banner-content">
+          <div class="pill super-title-pill">Email Negotiation Demo</div>
+          <h2 class="hero-headline">Watch Two AI Agents Negotiate a Deal</h2>
+          <p class="hero-subtext">
+            Buyer-agent emails a vendor to negotiate a purchase. It reads the instruction below, sends offers, checks every counter-offer against the budget, and stops once a deal is reached -- saving a full record of what happened.
+          </p>
+
+          <!-- Counterparties Overview -->
+          <div class="counterparties-banner">
+            <div class="pill party-pill">
+              <span class="pill-dot dot-idle" style="background-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);"></span>
+              <span>Buyer: <strong style="color: #ffffff;">rewardcourt@mermail.app</strong> <span class="party-sub">(this agent)</span></span>
+            </div>
+            <div class="counterparties-arrow" title="negotiating with">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </div>
+            <div class="pill party-pill">
+              <span class="pill-dot dot-idle" style="background-color: #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);"></span>
+              <span>Vendor: <strong style="color: #ffffff;" id="topPartyVendor">vendor.negotiator11@gmail.com</strong> <span class="party-sub">(negotiating with)</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Control Card -->
+      <div class="control-card">
+        <div class="instruction-label-row">
+          <span class="section-label">Natural Language Negotiation Instruction</span>
+          <div class="parsed-chips-row" id="parsedChips">
+            <span class="chip chip-buyer">Buyer: <strong>rewardcourt@mermail.app</strong> <span style="opacity: 0.8;">(this agent)</span></span>
+            <span class="chip chip-vendor">Vendor: <strong id="chipVendor">vendor.negotiator11@gmail.com</strong> <span style="opacity: 0.8;">(negotiating with)</span></span>
+            <span class="chip">Units: <strong id="chipUnits">100</strong></span>
+            <span class="chip">Product: <strong id="chipProduct">Widget X</strong></span>
+            <span class="chip">Budget Cap: <strong id="chipBudget">$50.00</strong></span>
+          </div>
+        </div>
+
+        <div class="input-wrapper">
+          <textarea
+            id="instructionInput"
+            class="instruction-input"
+            rows="2"
+            spellcheck="false"
+            placeholder="Type your natural language negotiation instruction here..."
+          >Negotiate with vendor.negotiator11@gmail.com for 100 units of Widget X, budget cap $50</textarea>
+        </div>
+
+        <div class="action-bar">
+          <div class="action-left">
+            <button id="btnStart" class="btn-start" onclick="handleStart()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              <span>Start Negotiation</span>
+            </button>
+            <button id="btnStop" class="btn-stop" style="display: none;" onclick="handleStop()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12"/>
+              </svg>
+              <span>Stop Agent</span>
+            </button>
+          </div>
+
+          <div class="action-presets">
+            <span class="preset-label">Preset:</span>
+            <div class="pill pill-clickable" onclick="setPreset('standard')">
+              Widget X ($50 Cap)
+            </div>
+            <div class="pill pill-clickable" onclick="setPreset('conservative')">
+              Widget X ($45 Cap)
+            </div>
+            <div class="pill pill-clickable" onclick="setPreset('highUnits')">
+              200 Units ($100 Cap)
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final Summary Panel (Shown when finished) -->
+    <section id="summarySection" style="display: none;">
+      <div class="summary-card">
+        <div class="summary-header-row">
+          <div class="summary-title-area">
+            <span class="summary-super" id="summarySuper">NEGOTIATION COMPLETED</span>
+            <h2 class="summary-main-heading status-accepted" id="summaryHeading">DEAL ACCEPTED</h2>
+          </div>
+          <div class="summary-actions">
+            <button class="btn-view-modal" onclick="openTranscriptModal()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              <span>View Transcript</span>
+            </button>
+            <a id="transcriptLink" class="btn-transcript" href="#" target="_blank">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+              <span>Open Markdown</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="metrics-grid">
+          <div class="metric-pill-card">
+            <span class="metric-title">Agreed Unit Price</span>
+            <span class="metric-value" id="valUnitPrice">$0.45</span>
+            <span class="metric-sub" id="valPriceSub">per unit</span>
+          </div>
+
+          <div class="metric-pill-card">
+            <span class="metric-title">Total Price</span>
+            <span class="metric-value" id="valTotalPrice">$45.00</span>
+            <span class="metric-sub" id="valTotalSub">for 100 units</span>
+          </div>
+
+          <div class="metric-pill-card">
+            <span class="metric-title">Budget Cap</span>
+            <span class="metric-value" id="valBudgetCap">$50.00</span>
+            <span class="metric-sub highlight-positive" id="valSavings">Saved $5.00 (10%)</span>
+          </div>
+
+          <div class="metric-pill-card">
+            <span class="metric-title">Wallet Status</span>
+            <span class="metric-value" style="font-size: 1.45rem; color: #34d399;" id="valWallet">ACTIVE</span>
+            <span class="metric-sub">Approval Required</span>
+          </div>
+
+          <div class="metric-pill-card">
+            <span class="metric-title">Counterparty</span>
+            <span class="metric-value" style="font-size: 1.05rem; word-break: break-all;" id="valVendor">vendor.negotiator11@gmail.com</span>
+            <span class="metric-sub">Verified Email IMAP/SMTP</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Log Panel -->
+    <section class="log-panel-card">
+      <div class="log-header">
+        <div class="log-header-left">
+          <div class="mac-dots">
+            <span class="mac-dot dot-red"></span>
+            <span class="mac-dot dot-yellow"></span>
+            <span class="mac-dot dot-green"></span>
+          </div>
+          <span class="log-title">Live Execution Console</span>
+          <span class="pill" id="streamBadge" style="padding: 3px 10px; font-size: 0.72rem;">
+            <span class="pill-dot dot-idle" id="streamDot"></span>
+            <span id="streamStatusText">STANDBY</span>
+          </span>
+        </div>
+
+        <div class="log-controls">
+          <button class="log-btn" id="btnAutoscroll" onclick="toggleAutoscroll()">
+            <span>Auto-scroll:</span>
+            <strong id="autoscrollState">ON</strong>
+          </button>
+          <button class="log-btn" onclick="clearLogs()">Clear</button>
+          <button class="log-btn" onclick="copyLogs()">Copy</button>
+        </div>
+      </div>
+
+      <div class="log-body" id="logContainer">
+        <div class="log-empty" id="logEmptyState">
+          <div class="log-empty-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+          </div>
+          <p>No negotiation running yet.<br>Click <strong>Start Negotiation</strong> above to run buyer-agent.js.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Transcript Modal -->
+  <div class="modal-overlay" id="transcriptModal" onclick="closeModalOnBackdrop(event)">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalTitle">Negotiation Transcript</h3>
+        <button class="log-btn" onclick="closeTranscriptModal()">Close ✕</button>
+      </div>
+      <pre class="modal-body" id="modalTranscriptBody">Loading transcript...</pre>
+      <div class="modal-footer">
+        <button class="log-btn" onclick="copyTranscript()">Copy Markdown</button>
+        <a id="modalDownloadLink" class="btn-transcript" href="#" target="_blank">Open Raw File</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // STATE & INITIALIZATION
+    // =========================================================================
+    let sseSource = null;
+    let autoScroll = true;
+    let currentTranscriptFilename = null;
+    let rawTranscriptText = '';
+
+    const instructionInput = document.getElementById('instructionInput');
+    const btnStart = document.getElementById('btnStart');
+    const btnStop = document.getElementById('btnStop');
+    const statusDot = document.getElementById('statusDot');
+    const statusLabel = document.getElementById('statusLabel');
+    const streamDot = document.getElementById('streamDot');
+    const streamStatusText = document.getElementById('streamStatusText');
+    const logContainer = document.getElementById('logContainer');
+    const logEmptyState = document.getElementById('logEmptyState');
+    const summarySection = document.getElementById('summarySection');
+    const summaryHeading = document.getElementById('summaryHeading');
+    const summarySuper = document.getElementById('summarySuper');
+    const transcriptLink = document.getElementById('transcriptLink');
+    const transcriptModal = document.getElementById('transcriptModal');
+    const modalTranscriptBody = document.getElementById('modalTranscriptBody');
+    const modalDownloadLink = document.getElementById('modalDownloadLink');
+
+    // Dynamic Chips Elements
+    const chipVendor = document.getElementById('chipVendor');
+    const chipUnits = document.getElementById('chipUnits');
+    const chipProduct = document.getElementById('chipProduct');
+    const chipBudget = document.getElementById('chipBudget');
+
+    // Live parse chips when input changes
+    instructionInput.addEventListener('input', () => {
+      updateParsedChips(instructionInput.value);
+    });
+
+    function updateParsedChips(text) {
+      const emailMatch = text.match(/(?:with|to)\s+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i) || text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+      const unitsMatch = text.match(/(\d+)\s*(?:units?|pieces?|pcs?|items?)\b/i);
+      const budgetMatch = text.match(/(?:budget\s*(?:cap)?|cap)\s*(?:of|is|:)?\s*\$?([0-9]+(?:\.[0-9]+)?)/i);
+      const productMatch = text.match(/(?:units?|pieces?|pcs?|items?)\s+of\s+([^,;]+?)(?:,\s*budget|\s+budget|\s+cap|$)/i) || text.match(/(?:for|negotiate for)\s+([^,;]+?)(?:,\s*budget|\s+budget|\s+cap|$)/i);
+
+      const vendorVal = emailMatch ? emailMatch[1] : 'default';
+      chipVendor.textContent = vendorVal;
+      const topPartyVendor = document.getElementById('topPartyVendor');
+      if (topPartyVendor) {
+        topPartyVendor.textContent = emailMatch ? emailMatch[1] : 'vendor.negotiator11@gmail.com';
+      }
+      chipUnits.textContent = unitsMatch ? unitsMatch[1] : 'default';
+      chipProduct.textContent = productMatch ? productMatch[1].trim() : 'Widget X';
+      chipBudget.textContent = budgetMatch ? `$${parseFloat(budgetMatch[1]).toFixed(2)}` : 'default';
+    }
+
+    function setPreset(type) {
+      if (type === 'standard') {
+        instructionInput.value = 'Negotiate with vendor.negotiator11@gmail.com for 100 units of Widget X, budget cap $50';
+      } else if (type === 'conservative') {
+        instructionInput.value = 'Negotiate with vendor.negotiator11@gmail.com for 100 units of Widget X, budget cap $45';
+      } else if (type === 'highUnits') {
+        instructionInput.value = 'Negotiate with vendor.negotiator11@gmail.com for 200 units of Widget X, budget cap $100';
+      }
+      updateParsedChips(instructionInput.value);
+    }
+
+    // =========================================================================
+    // SERVER-SENT EVENTS CONNECTION
+    // =========================================================================
+    function connectSse() {
+      if (sseSource) sseSource.close();
+      sseSource = new EventSource('/api/events');
+
+      sseSource.addEventListener('init', (e) => {
+        const payload = JSON.parse(e.data);
+        const state = payload.state;
+        if (state.instruction && !instructionInput.value.trim()) {
+          instructionInput.value = state.instruction;
+          updateParsedChips(state.instruction);
+        }
+
+        if (state.status === 'running') {
+          setAgentRunningUI(true);
+        } else {
+          setAgentRunningUI(false, state.status);
+        }
+
+        if (state.logs && state.logs.length > 0) {
+          clearLogs();
+          for (const l of state.logs) {
+            appendLogLine(l.text, l.stream, l.timestamp);
+          }
+        }
+
+        if (state.summary || state.status === 'completed') {
+          renderSummary(state.summary, state.transcriptFilename);
+        }
+      });
+
+      sseSource.addEventListener('start', (e) => {
+        setAgentRunningUI(true);
+        summarySection.style.display = 'none';
+        clearLogs();
+      });
+
+      sseSource.addEventListener('log', (e) => {
+        const entry = JSON.parse(e.data);
+        appendLogLine(entry.text, entry.stream, entry.timestamp);
+      });
+
+      sseSource.addEventListener('summary_update', (e) => {
+        const summary = JSON.parse(e.data);
+        renderSummary(summary, currentTranscriptFilename);
+      });
+
+      sseSource.addEventListener('transcript_ready', (e) => {
+        const payload = JSON.parse(e.data);
+        currentTranscriptFilename = payload.filename;
+        renderTranscriptLink(payload.filename);
+      });
+
+      sseSource.addEventListener('done', (e) => {
+        const payload = JSON.parse(e.data);
+        setAgentRunningUI(false, payload.status);
+        if (payload.transcriptFilename) {
+          currentTranscriptFilename = payload.transcriptFilename;
+        }
+        renderSummary(payload.summary, currentTranscriptFilename);
+      });
+
+      sseSource.onerror = () => {
+        streamDot.className = 'pill-dot dot-error';
+        streamStatusText.textContent = 'RECONNECTING...';
+      };
+
+      sseSource.onopen = () => {
+        streamDot.className = 'pill-dot dot-success';
+        streamStatusText.textContent = 'CONNECTED';
+      };
+    }
+
+    // =========================================================================
+    // LOG STREAM RENDERING & HIGHLIGHTING
+    // =========================================================================
+    function appendLogLine(rawText, stream = 'stdout', timestamp = null) {
+      if (logEmptyState) {
+        logEmptyState.style.display = 'none';
+      }
+
+      const lines = rawText.split(/\r?\n/);
+      for (const line of lines) {
+        if (!line && lines.length > 1) continue;
+
+        const lineEl = document.createElement('div');
+        lineEl.className = 'log-line' + (stream === 'stderr' ? ' stream-stderr' : '');
+
+        // Detect banner borders
+        if (line.includes('====') || line.includes('READY FOR PAYMENT APPROVAL') || line.includes('NEGOTIATION COMPLETE:')) {
+          lineEl.className += ' log-line-banner';
+          lineEl.textContent = line;
+          logContainer.appendChild(lineEl);
+          continue;
+        }
+
+        // Highlight matching keywords
+        let formatted = escapeHtml(line);
+
+        // Highlight [Buyer Agent]
+        formatted = formatted.replace(/(\[Buyer Agent\])/g, '<span class="log-tag-agent">$1</span>');
+        // Highlight Offer
+        formatted = formatted.replace(/(OFFER:\s*\$[0-9.]+\/unit[^<\n]*)/gi, '<span class="log-highlight-offer">$1</span>');
+        // Highlight Counter
+        formatted = formatted.replace(/(Decision=COUNTER|counter-offer[^<\n]*)/gi, '<span class="log-highlight-counter">$1</span>');
+        // Highlight Accept
+        formatted = formatted.replace(/(Decision=ACCEPT|DEAL ACCEPTED|Acceptance email sent)/gi, '<span class="log-highlight-accept">$1</span>');
+        // Highlight timestamps
+        formatted = formatted.replace(/^(\[\d{4}-\d{2}-\d{2}T[^\]]+\])/, '<span class="log-tag-time">$1</span>');
+
+        lineEl.innerHTML = formatted;
+        logContainer.appendChild(lineEl);
+      }
+
+      if (autoScroll) {
+        logContainer.scrollTop = logContainer.scrollHeight;
+      }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+    }
+
+    function toggleAutoscroll() {
+      autoScroll = !autoScroll;
+      document.getElementById('autoscrollState').textContent = autoScroll ? 'ON' : 'OFF';
+      if (autoScroll) logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function clearLogs() {
+      logContainer.innerHTML = '';
+      if (logEmptyState) {
+        logContainer.appendChild(logEmptyState);
+        logEmptyState.style.display = 'flex';
+      }
+    }
+
+    function copyLogs() {
+      const text = logContainer.innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Console logs copied to clipboard.');
+      }).catch(err => {
+        console.error('Copy failed:', err);
+      });
+    }
+
+    // =========================================================================
+    // UI STATE UPDATES
+    // =========================================================================
+    function setAgentRunningUI(isRunning, finalStatus = null) {
+      if (isRunning) {
+        btnStart.disabled = true;
+        btnStart.innerHTML = `
+          <svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="animation: spin 1s linear infinite;">
+            <circle cx="12" cy="12" r="10" stroke="rgba(0,0,0,0.2)"></circle>
+            <path d="M12 2a10 10 0 0 1 10 10" stroke="#000"></path>
+          </svg>
+          <span>Negotiation In Progress...</span>
+        `;
+        btnStop.style.display = 'inline-flex';
+        statusDot.className = 'pill-dot dot-running';
+        statusLabel.innerHTML = 'Agent: <strong>NEGOTIATING</strong>';
+        streamDot.className = 'pill-dot dot-running';
+        streamStatusText.textContent = 'STREAMING LIVE';
+      } else {
+        btnStart.disabled = false;
+        btnStart.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+          <span>Start Negotiation</span>
+        `;
+        btnStop.style.display = 'none';
+
+        if (finalStatus === 'completed') {
+          statusDot.className = 'pill-dot dot-success';
+          statusLabel.innerHTML = 'Agent: <strong>COMPLETED</strong>';
+          streamDot.className = 'pill-dot dot-idle';
+          streamStatusText.textContent = 'FINISHED';
+        } else if (finalStatus === 'failed') {
+          statusDot.className = 'pill-dot dot-error';
+          statusLabel.innerHTML = 'Agent: <strong>FAILED</strong>';
+          streamDot.className = 'pill-dot dot-idle';
+          streamStatusText.textContent = 'ERROR';
+        } else if (finalStatus === 'stopped') {
+          statusDot.className = 'pill-dot dot-idle';
+          statusLabel.innerHTML = 'Agent: <strong>STOPPED</strong>';
+          streamDot.className = 'pill-dot dot-idle';
+          streamStatusText.textContent = 'STOPPED';
+        } else {
+          statusDot.className = 'pill-dot dot-idle';
+          statusLabel.innerHTML = 'Agent: <strong>IDLE</strong>';
+          streamDot.className = 'pill-dot dot-idle';
+          streamStatusText.textContent = 'STANDBY';
+        }
+      }
+    }
+
+    // =========================================================================
+    // SUMMARY RENDERING
+    // =========================================================================
+    function renderSummary(summary, filename) {
+      if (!summary) return;
+      summarySection.style.display = 'block';
+
+      const isAccepted = (summary.status || '').toUpperCase().includes('ACCEPT');
+      const isWalkAway = (summary.status || '').toUpperCase().includes('WALK');
+
+      if (isAccepted) {
+        summaryHeading.textContent = 'DEAL ACCEPTED';
+        summaryHeading.className = 'summary-main-heading status-accepted';
+        summarySuper.textContent = 'NEGOTIATION COMPLETED WITH FULL CONSENSUS';
+        summarySuper.style.color = '#34d399';
+      } else if (isWalkAway) {
+        summaryHeading.textContent = 'WALK AWAY';
+        summaryHeading.className = 'summary-main-heading status-walkaway';
+        summarySuper.textContent = 'NEGOTIATION TERMINATED WITHOUT DEAL';
+        summarySuper.style.color = '#f87171';
+      } else {
+        summaryHeading.textContent = summary.status || 'DEAL COMPLETE';
+        summaryHeading.className = 'summary-main-heading';
+        summarySuper.textContent = 'NEGOTIATION UPDATE';
+      }
+
+      if (summary.pricePerUnit) document.getElementById('valUnitPrice').textContent = summary.pricePerUnit;
+      if (summary.totalPrice) document.getElementById('valTotalPrice').textContent = summary.totalPrice;
+      if (summary.budgetCap) document.getElementById('valBudgetCap').textContent = summary.budgetCap;
+      if (summary.units) document.getElementById('valTotalSub').textContent = `for ${summary.units} units`;
+      if (summary.walletStatus) document.getElementById('valWallet').textContent = summary.walletStatus;
+      if (summary.vendor) document.getElementById('valVendor').textContent = summary.vendor;
+
+      // Calculate savings if numbers available
+      if (summary.totalPrice && summary.budgetCap) {
+        const totalNum = parseFloat(summary.totalPrice.replace(/[^0-9.]/g, ''));
+        const capNum = parseFloat(summary.budgetCap.replace(/[^0-9.]/g, ''));
+        if (!isNaN(totalNum) && !isNaN(capNum)) {
+          const diff = capNum - totalNum;
+          if (diff >= 0) {
+            const pct = Math.round((diff / capNum) * 100);
+            document.getElementById('valSavings').textContent = `Saved $${diff.toFixed(2)} (${pct}%)`;
+            document.getElementById('valSavings').className = 'metric-sub highlight-positive';
+          } else {
+            document.getElementById('valSavings').textContent = `Over budget by $${Math.abs(diff).toFixed(2)}`;
+            document.getElementById('valSavings').className = 'metric-sub';
+          }
+        }
+      }
+
+      if (filename) {
+        renderTranscriptLink(filename);
+      }
+    }
+
+    function renderTranscriptLink(filename) {
+      if (!filename) return;
+      currentTranscriptFilename = filename;
+      transcriptLink.href = `/transcripts/${encodeURIComponent(filename)}`;
+      modalDownloadLink.href = `/transcripts/${encodeURIComponent(filename)}`;
+      transcriptLink.style.display = 'inline-flex';
+    }
+
+    // =========================================================================
+    // API ACTIONS: START & STOP
+    // =========================================================================
+    async function handleStart() {
+      const instruction = instructionInput.value.trim();
+      try {
+        setAgentRunningUI(true);
+        summarySection.style.display = 'none';
+
+        const res = await fetch('/api/negotiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ instruction })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(`Could not start negotiation: ${data.error || 'Server error'}`);
+          setAgentRunningUI(false);
+        }
+      } catch (err) {
+        alert(`Error communicating with server: ${err.message}`);
+        setAgentRunningUI(false);
+      }
+    }
+
+    async function handleStop() {
+      try {
+        const res = await fetch('/api/stop', { method: 'POST' });
+        const data = await res.json();
+        console.log('Stop signal sent:', data);
+      } catch (err) {
+        console.error('Stop error:', err);
+      }
+    }
+
+    // =========================================================================
+    // MODAL DIALOG
+    // =========================================================================
+    async function openTranscriptModal() {
+      transcriptModal.classList.add('active');
+      modalTranscriptBody.textContent = 'Loading latest transcript markdown...';
+
+      if (!currentTranscriptFilename) {
+        // Fetch list of transcripts
+        try {
+          const listRes = await fetch('/api/transcripts');
+          const listData = await listRes.json();
+          if (listData.transcripts && listData.transcripts.length > 0) {
+            currentTranscriptFilename = listData.transcripts[0].filename;
+            renderTranscriptLink(currentTranscriptFilename);
+          }
+        } catch (err) {
+          // ignore
+        }
+      }
+
+      if (currentTranscriptFilename) {
+        try {
+          const res = await fetch(`/transcripts/${encodeURIComponent(currentTranscriptFilename)}`);
+          if (res.ok) {
+            rawTranscriptText = await res.text();
+            modalTranscriptBody.textContent = rawTranscriptText;
+            document.getElementById('modalTitle').textContent = `Transcript: ${currentTranscriptFilename}`;
+          } else {
+            modalTranscriptBody.textContent = 'Could not load transcript content.';
+          }
+        } catch (err) {
+          modalTranscriptBody.textContent = `Error loading transcript: ${err.message}`;
+        }
+      } else {
+        modalTranscriptBody.textContent = 'No transcript generated yet. Run a negotiation to generate one.';
+      }
+    }
+
+    function closeTranscriptModal() {
+      transcriptModal.classList.remove('active');
+    }
+
+    function closeModalOnBackdrop(e) {
+      if (e.target === transcriptModal) {
+        closeTranscriptModal();
+      }
+    }
+
+    function copyTranscript() {
+      if (!rawTranscriptText) return;
+      navigator.clipboard.writeText(rawTranscriptText).then(() => {
+        alert('Transcript markdown copied to clipboard.');
+      });
+    }
+
+    // Spin animation for button
+    const style = document.createElement('style');
+    style.innerHTML = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+    document.head.appendChild(style);
+
+    // Initial SSE connection
+    connectSse();
+  </script>
+</body>
+</html>
