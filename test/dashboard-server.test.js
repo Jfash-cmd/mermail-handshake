@@ -72,4 +72,11 @@ test('Dashboard server starts, serves endpoints and HTML', async (t) => {
   const unauthStartJson = await unauthStartRes.json();
   assert.strictEqual(unauthStartJson.ok, false);
   assert.match(unauthStartJson.error, /PIN/i);
+
+  // 9. Check POST /api/reset returns 200 and resets status to idle
+  const resetRes = await fetch(`http://localhost:${testPort}/api/reset`, { method: 'POST' });
+  assert.strictEqual(resetRes.status, 200);
+  const resetJson = await resetRes.json();
+  assert.strictEqual(resetJson.ok, true);
+  assert.strictEqual(negotiationState.status, 'idle');
 });

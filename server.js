@@ -298,6 +298,32 @@ function stopNegotiation() {
   return { ok: true, message: 'Termination signal sent.' };
 }
 
+/**
+ * Reset negotiation state to idle and clear logs/summary
+ */
+function resetNegotiationState() {
+  if (activeProcess) {
+    try {
+      activeProcess.kill('SIGTERM');
+    } catch (err) {
+      // Ignore process kill error
+    }
+    activeProcess = null;
+  }
+  negotiationState = {
+    status: 'idle',
+    startTime: null,
+    endTime: null,
+    instruction: 'Negotiate with vendor.negotiator11@gmail.com for 100 units of Widget X, budget cap $50',
+    logs: [],
+    summary: null,
+    transcriptPath: null,
+    transcriptFilename: null
+  };
+  broadcastEvent('reset', { status: 'idle' });
+  return { ok: true, message: 'Negotiation state reset to idle.' };
+}
+
 // ============================================================================
 // HTTP REQUEST ROUTING
 // ============================================================================
@@ -418,6 +444,14 @@ const server = http.createServer((req, res) => {
   // 5. Stop negotiation: POST /api/stop or POST /api/kill
   if ((pathname === '/api/stop' || pathname === '/api/kill') && req.method === 'POST') {
     const result = stopNegotiation();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(result));
+    return;
+  }
+
+  // 6. Reset negotiation: POST /api/reset or POST /api/clear
+  if ((pathname === '/api/reset' || pathname === '/api/clear') && req.method === 'POST') {
+    const result = resetNegotiationState();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(result));
     return;
@@ -564,6 +598,7 @@ module.exports = {
   startServer,
   startNegotiation,
   stopNegotiation,
+  resetNegotiationState,
   negotiationState,
   getDashboardPin,
   isPinProtected,

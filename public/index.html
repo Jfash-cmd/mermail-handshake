@@ -1819,6 +1819,12 @@
             <h2 class="summary-main-heading status-accepted" id="summaryHeading">DEAL ACCEPTED</h2>
           </div>
           <div class="summary-actions">
+            <button class="btn-transcript" style="background: rgba(255, 255, 255, 0.08); color: #e4e4e7; border: 1px solid var(--border-subtle);" onclick="resetDashboard()" title="Clear these results and start fresh">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Clear Results</span>
+            </button>
             <button class="btn-view-modal" onclick="openTranscriptModal()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -1896,6 +1902,7 @@
             <span>Auto-scroll:</span>
             <strong id="autoscrollState">ON</strong>
           </button>
+          <button class="log-btn" onclick="resetDashboard()" title="Clear previous results and return to idle">Reset</button>
           <button class="log-btn" onclick="clearLogs()">Clear</button>
           <button class="log-btn" onclick="copyLogs()">Copy</button>
         </div>
@@ -2031,6 +2038,12 @@
         clearLogs();
       });
 
+      sseSource.addEventListener('reset', (e) => {
+        setAgentRunningUI(false, 'idle');
+        summarySection.style.display = 'none';
+        clearLogs();
+      });
+
       sseSource.addEventListener('log', (e) => {
         const entry = JSON.parse(e.data);
         appendLogLine(entry.text, entry.stream, entry.timestamp);
@@ -2133,6 +2146,17 @@
         logContainer.appendChild(logEmptyState);
         logEmptyState.style.display = 'flex';
       }
+    }
+
+    async function resetDashboard() {
+      try {
+        await fetch('/api/reset', { method: 'POST' });
+      } catch (err) {
+        console.error('Reset error:', err);
+      }
+      setAgentRunningUI(false, 'idle');
+      summarySection.style.display = 'none';
+      clearLogs();
     }
 
     function copyLogs() {

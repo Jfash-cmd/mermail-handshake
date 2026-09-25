@@ -246,8 +246,17 @@ function handleIncomingOffer(emailData, state) {
   // Check if this sender already had this round or a later round processed
   const negotiation = state.activeNegotiations.get(sender);
   if (negotiation) {
-    // If the negotiation previously finished (final) and buyer starts a brand new round 1, allow reset
-    const isNewNegotiation = negotiation.isFinal && offerData.round === 1;
+    const now = Date.now();
+    // A new negotiation starts if:
+    // 1. The previous negotiation finished (isFinal is true, or last decision was ACCEPT / WALK_AWAY)
+    // 2. An opening offer (Round 1) arrives and more than 4 seconds have passed since last interaction
+    const isNewNegotiation = (
+      negotiation.isFinal ||
+      negotiation.lastDecision === 'ACCEPT' ||
+      negotiation.lastDecision === 'WALK_AWAY' ||
+      (offerData.round === 1 && (!negotiation.lastActiveTime || (now - negotiation.lastActiveTime > 4000)))
+    );
+
     if (!isNewNegotiation && offerData.round <= negotiation.lastProcessedRound) {
       state.processedUids.add(uid);
       if (messageId) state.processedMessageIds.add(messageId);
@@ -271,7 +280,8 @@ function handleIncomingOffer(emailData, state) {
     lastDecision: result.decision,
     lastPrice: result.price,
     lastMessageId: messageId,
-    isFinal: result.isFinal
+    lastActiveTime: Date.now(),
+    isFinal: result.isFinal || result.decision === 'ACCEPT' || result.decision === 'WALK_AWAY'
   });
 
   return {
