@@ -1,8 +1,42 @@
+require('dotenv').config();
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const { URL } = require('url');
+
+/**
+ * Helper to get configured DASHBOARD_PIN from environment
+ */
+function getDashboardPin() {
+  return process.env.DASHBOARD_PIN !== undefined ? String(process.env.DASHBOARD_PIN).trim() : '';
+}
+
+/**
+ * Check whether PIN protection is active
+ */
+function isPinProtected() {
+  return Boolean(getDashboardPin());
+}
+
+/**
+ * Validate candidate PIN against configured DASHBOARD_PIN
+ */
+function verifyDashboardPin(candidatePin) {
+  const configured = getDashboardPin();
+  if (!configured) {
+    return { valid: true, required: false };
+  }
+  if (candidatePin === undefined || candidatePin === null || String(candidatePin).trim() === '') {
+    return { valid: false, required: true, reason: 'PIN is required to start a negotiation.' };
+  }
+  const isMatch = String(candidatePin).trim() === configured;
+  return {
+    valid: isMatch,
+    required: true,
+    reason: isMatch ? null : 'Incorrect PIN. Access denied.'
+  };
+}
 
 const PORT = process.env.PORT || 3000;
 const HOST = 'localhost';
@@ -316,7 +350,41 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 2. Start negotiation: POST /api/negotiate or POST /api/start
+  // 2. PIN verification endpoint: POST /api/verify-pin
+  if (pathname === '/api/verify-pin' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      try {
+        let payload = {};
+        if (body.trim()) {
+          payload = JSON.parse(body);
+        }
+        const pin = payload.pin !== undefined ? payload.pin : req.headers['x-dashboard-pin'];
+        const check = verifyDashboardPin(pin);
+        if (!check.valid) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, verified: false, error: check.reason }));
+          return;
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, verified: true, message: 'PIN verified successfully.' }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: 'Invalid JSON request payload.' }));
+      }
+    });
+    return;
+  }
+
+  // 3. PIN status endpoint: GET /api/pin-status
+  if (pathname === '/api/pin-status' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, required: isPinProtected() }));
+    return;
+  }
+
+  // 4. Start negotiation: POST /api/negotiate or POST /api/start
   if ((pathname === '/api/negotiate' || pathname === '/api/start') && req.method === 'POST') {
     let body = '';
     req.on('data', (chunk) => { body += chunk; });
@@ -326,6 +394,16 @@ const server = http.createServer((req, res) => {
         if (body.trim()) {
           payload = JSON.parse(body);
         }
+
+        // Verify PIN before allowing start
+        const candidatePin = payload.pin !== undefined ? payload.pin : req.headers['x-dashboard-pin'];
+        const pinCheck = verifyDashboardPin(candidatePin);
+        if (!pinCheck.valid) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, error: pinCheck.reason || 'PIN required to start negotiation.' }));
+          return;
+        }
+
         const result = startNegotiation(payload.instruction);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
@@ -337,7 +415,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 3. Stop negotiation: POST /api/stop or POST /api/kill
+  // 5. Stop negotiation: POST /api/stop or POST /api/kill
   if ((pathname === '/api/stop' || pathname === '/api/kill') && req.method === 'POST') {
     const result = stopNegotiation();
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -345,7 +423,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // 4. Status endpoint: GET /api/status
+  // 6. Status endpoint: GET /api/status
   if (pathname === '/api/status' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
@@ -355,7 +433,8 @@ const server = http.createServer((req, res) => {
       instruction: negotiationState.instruction,
       summary: negotiationState.summary,
       transcriptFilename: negotiationState.transcriptFilename,
-      logCount: negotiationState.logs.length
+      logCount: negotiationState.logs.length,
+      pinRequired: isPinProtected()
     }));
     return;
   }
@@ -485,5 +564,8 @@ module.exports = {
   startServer,
   startNegotiation,
   stopNegotiation,
-  negotiationState
+  negotiationState,
+  getDashboardPin,
+  isPinProtected,
+  verifyDashboardPin
 };

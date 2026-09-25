@@ -39,6 +39,7 @@ npm install
 MERMAIL_API_KEY=your_mermail_api_key
 VENDOR_GMAIL_ADDRESS=your_vendor_bot_email@gmail.com
 VENDOR_GMAIL_APP_PASSWORD=your_vendor_gmail_app_password
+DASHBOARD_PIN=your_dashboard_pin
 ```
 
 ## How to run it

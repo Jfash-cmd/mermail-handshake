@@ -607,6 +607,99 @@
       border-color: var(--rose);
     }
 
+    /* PIN Protection Styling */
+    .pin-box {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .pin-inner {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #141417;
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-pill);
+      padding: 4px 6px 4px 14px;
+      box-shadow: var(--shadow-pill);
+      transition: all 0.2s ease;
+    }
+
+    .pin-inner:focus-within {
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 0 16px rgba(255, 255, 255, 0.12);
+    }
+
+    .pin-icon {
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .pin-input {
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      width: 105px;
+      letter-spacing: 0.08em;
+      outline: none;
+    }
+
+    .pin-input::placeholder {
+      color: var(--text-dim);
+      font-weight: 400;
+      letter-spacing: normal;
+      font-size: 0.82rem;
+    }
+
+    .btn-pin-submit {
+      background: #27272a;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: var(--radius-pill);
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .btn-pin-submit:hover:not(:disabled) {
+      background: #ffffff;
+      color: #0a0a0a;
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.25);
+    }
+
+    .btn-pin-submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .pin-feedback {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding-left: 14px;
+      min-height: 16px;
+    }
+
+    .pin-feedback.error {
+      color: #f87171;
+    }
+
+    .pin-feedback.success {
+      color: #34d399;
+    }
+
+    .pin-unlocked-pill {
+      background: rgba(16, 185, 129, 0.08);
+      border-color: rgba(16, 185, 129, 0.25);
+      color: #a7f3d0;
+    }
+
     .action-presets {
       display: flex;
       align-items: center;
@@ -1154,6 +1247,35 @@
 
         <div class="action-bar">
           <div class="action-left">
+            <!-- PIN Protection Box -->
+            <div id="pinBox" class="pin-box" style="display: none;">
+              <div class="pin-inner">
+                <svg class="pin-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <input
+                  type="password"
+                  id="pinInput"
+                  class="pin-input"
+                  placeholder="Enter PIN..."
+                  maxlength="32"
+                  autocomplete="off"
+                  onkeydown="if(event.key==='Enter') handleVerifyPin()"
+                />
+                <button type="button" id="btnVerifyPin" class="btn-pin-submit" onclick="handleVerifyPin()">
+                  Unlock
+                </button>
+              </div>
+              <span id="pinFeedback" class="pin-feedback"></span>
+            </div>
+
+            <!-- PIN Unlocked Indicator -->
+            <div id="pinUnlockedBadge" class="pill pin-unlocked-pill" style="display: none;">
+              <span class="pill-dot dot-success"></span>
+              <span>PIN Verified</span>
+            </div>
+
             <button id="btnStart" class="btn-start" onclick="handleStart()">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M8 5v14l11-7z"/>
@@ -1637,23 +1759,142 @@
     }
 
     // =========================================================================
+    // PIN PROTECTION & VERIFICATION
+    // =========================================================================
+    let isPinRequired = false;
+    let verifiedPin = null;
+
+    async function checkPinRequirement() {
+      try {
+        const res = await fetch('/api/pin-status');
+        const data = await res.json();
+        isPinRequired = Boolean(data.required);
+
+        const pinBox = document.getElementById('pinBox');
+        const btnStart = document.getElementById('btnStart');
+        const pinUnlockedBadge = document.getElementById('pinUnlockedBadge');
+
+        if (isPinRequired) {
+          const savedPin = sessionStorage.getItem('dashboard_pin');
+          if (savedPin) {
+            const verifyRes = await fetch('/api/verify-pin', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ pin: savedPin })
+            });
+            if (verifyRes.ok) {
+              verifiedPin = savedPin;
+              pinBox.style.display = 'none';
+              pinUnlockedBadge.style.display = 'inline-flex';
+              btnStart.disabled = false;
+              btnStart.title = 'Start negotiation';
+              return;
+            }
+          }
+          pinBox.style.display = 'inline-flex';
+          pinUnlockedBadge.style.display = 'none';
+          btnStart.disabled = true;
+          btnStart.title = 'Enter and submit PIN to unlock';
+        } else {
+          pinBox.style.display = 'none';
+          pinUnlockedBadge.style.display = 'none';
+          btnStart.disabled = false;
+          btnStart.title = 'Start negotiation';
+        }
+      } catch (err) {
+        console.error('Error checking PIN status:', err);
+      }
+    }
+
+    async function handleVerifyPin() {
+      const pinInput = document.getElementById('pinInput');
+      const pinFeedback = document.getElementById('pinFeedback');
+      const btnVerifyPin = document.getElementById('btnVerifyPin');
+      const pin = pinInput.value.trim();
+
+      if (!pin) {
+        pinFeedback.className = 'pin-feedback error';
+        pinFeedback.textContent = 'Please enter a PIN.';
+        pinInput.focus();
+        return;
+      }
+
+      btnVerifyPin.disabled = true;
+      btnVerifyPin.textContent = 'Checking...';
+      pinFeedback.textContent = '';
+
+      try {
+        const res = await fetch('/api/verify-pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+          verifiedPin = pin;
+          try { sessionStorage.setItem('dashboard_pin', pin); } catch (e) {}
+
+          pinFeedback.className = 'pin-feedback success';
+          pinFeedback.textContent = 'Unlocked';
+
+          setTimeout(() => {
+            document.getElementById('pinBox').style.display = 'none';
+            document.getElementById('pinUnlockedBadge').style.display = 'inline-flex';
+            const btnStart = document.getElementById('btnStart');
+            btnStart.disabled = false;
+            btnStart.title = 'Start negotiation';
+          }, 300);
+        } else {
+          pinFeedback.className = 'pin-feedback error';
+          pinFeedback.textContent = data.error || 'Incorrect PIN';
+          pinInput.value = '';
+          pinInput.focus();
+        }
+      } catch (err) {
+        pinFeedback.className = 'pin-feedback error';
+        pinFeedback.textContent = 'Connection error';
+      } finally {
+        btnVerifyPin.disabled = false;
+        btnVerifyPin.textContent = 'Unlock';
+      }
+    }
+
+    // =========================================================================
     // API ACTIONS: START & STOP
     // =========================================================================
     async function handleStart() {
+      if (isPinRequired && !verifiedPin) {
+        alert('Please enter and submit the correct PIN to unlock Start Negotiation.');
+        const pinInput = document.getElementById('pinInput');
+        if (pinInput) pinInput.focus();
+        return;
+      }
+
       const instruction = instructionInput.value.trim();
       try {
         setAgentRunningUI(true);
         summarySection.style.display = 'none';
 
+        const headers = { 'Content-Type': 'application/json' };
+        if (verifiedPin) {
+          headers['x-dashboard-pin'] = verifiedPin;
+        }
+
         const res = await fetch('/api/negotiate', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ instruction })
+          headers,
+          body: JSON.stringify({ instruction, pin: verifiedPin })
         });
         const data = await res.json();
         if (!res.ok) {
           alert(`Could not start negotiation: ${data.error || 'Server error'}`);
           setAgentRunningUI(false);
+          if (res.status === 401) {
+            verifiedPin = null;
+            try { sessionStorage.removeItem('dashboard_pin'); } catch (e) {}
+            checkPinRequirement();
+          }
         }
       } catch (err) {
         alert(`Error communicating with server: ${err.message}`);
@@ -1732,8 +1973,9 @@
     style.innerHTML = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
     document.head.appendChild(style);
 
-    // Initial SSE connection
+    // Initial SSE connection and PIN status check
     connectSse();
+    checkPinRequirement();
   </script>
 </body>
 </html>
