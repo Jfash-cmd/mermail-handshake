@@ -39,7 +39,7 @@ function verifyDashboardPin(candidatePin) {
 }
 
 const PORT = process.env.PORT || 3000;
-const HOST = 'localhost';
+const HOST = '0.0.0.0';
 const WORKSPACE_DIR = __dirname;
 const TRANSCRIPTS_DIR = path.join(WORKSPACE_DIR, 'transcripts');
 const PUBLIC_DIR = path.join(WORKSPACE_DIR, 'public');
@@ -303,7 +303,7 @@ function stopNegotiation() {
 // ============================================================================
 
 const server = http.createServer((req, res) => {
-  const reqUrl = new URL(req.url, `http://${req.headers.host || HOST}`);
+  const reqUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = reqUrl.pathname;
 
   // Enable CORS for local convenience
@@ -535,17 +535,17 @@ const server = http.createServer((req, res) => {
   res.end('Not Found');
 });
 
-function startServer(port = PORT) {
+function startServer(port = (process.env.PORT || 3000), host = '0.0.0.0') {
   return new Promise((resolve, reject) => {
-    server.listen(port, HOST, () => {
-      console.log(`[Dashboard Server] Running at http://${HOST}:${port}/`);
+    server.listen(port, host, () => {
+      console.log(`[Dashboard Server] Running at http://${host}:${port}/ (bound to ${host})`);
       resolve(server);
     });
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
         console.warn(`[Dashboard Server] Port ${port} in use, trying ${port + 1}...`);
-        server.listen(port + 1, HOST, () => {
-          console.log(`[Dashboard Server] Running at http://${HOST}:${port + 1}/`);
+        server.listen(port + 1, host, () => {
+          console.log(`[Dashboard Server] Running at http://${host}:${port + 1}/ (bound to ${host})`);
           resolve(server);
         });
       } else {
@@ -567,5 +567,7 @@ module.exports = {
   negotiationState,
   getDashboardPin,
   isPinProtected,
-  verifyDashboardPin
+  verifyDashboardPin,
+  PORT,
+  HOST
 };
