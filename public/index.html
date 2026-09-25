@@ -501,11 +501,35 @@
       border: 1px solid var(--border-medium);
       padding: 8px 16px;
       font-size: 0.88rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .party-content {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .party-label {
+      color: #e4e4e7;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .party-email {
+      color: #ffffff;
+      font-weight: 700;
+      word-break: break-all;
+      overflow-wrap: anywhere;
     }
 
     .party-sub {
       color: var(--text-muted);
       font-weight: 500;
+      white-space: nowrap;
       margin-left: 2px;
     }
 
@@ -1273,10 +1297,52 @@
       .party-pill {
         width: 100%;
         white-space: normal;
+        padding: 10px 14px;
+        font-size: 0.84rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        box-sizing: border-box;
+      }
+
+      .party-pill .pill-dot {
+        margin-top: 3px;
+        flex-shrink: 0;
+      }
+
+      .party-content {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        min-width: 0;
+        flex: 1;
+      }
+
+      .party-label {
+        font-size: 0.74rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        white-space: nowrap;
+      }
+
+      .party-email {
+        font-size: 0.88rem;
+        color: #ffffff;
+        font-weight: 700;
         word-break: break-all;
-        font-size: 0.8rem;
-        padding: 8px 12px;
-        justify-content: flex-start;
+        overflow-wrap: anywhere;
+        line-height: 1.35;
+      }
+
+      .party-sub {
+        font-size: 0.74rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        white-space: nowrap;
+        margin-left: 0;
       }
 
       .counterparties-arrow {
@@ -1554,6 +1620,14 @@
         flex: 1 1 100%;
       }
 
+      .party-pill {
+        padding: 9px 12px;
+      }
+
+      .party-email {
+        font-size: 0.84rem;
+      }
+
       .metrics-grid {
         grid-template-columns: 1fr;
       }
@@ -1631,7 +1705,11 @@
           <div class="counterparties-banner">
             <div class="pill party-pill">
               <span class="pill-dot dot-idle" style="background-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);"></span>
-              <span>Buyer: <strong style="color: #ffffff;">rewardcourt@mermail.app</strong> <span class="party-sub">(this agent)</span></span>
+              <div class="party-content">
+                <span class="party-label">Buyer:</span>
+                <strong class="party-email">rewardcourt@mermail.app</strong>
+                <span class="party-sub">(this agent)</span>
+              </div>
             </div>
             <div class="counterparties-arrow" title="negotiating with">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#71717a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1640,7 +1718,11 @@
             </div>
             <div class="pill party-pill">
               <span class="pill-dot dot-idle" style="background-color: #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);"></span>
-              <span>Vendor: <strong style="color: #ffffff;" id="topPartyVendor">vendor.negotiator11@gmail.com</strong> <span class="party-sub">(negotiating with)</span></span>
+              <div class="party-content">
+                <span class="party-label">Vendor:</span>
+                <strong class="party-email" id="topPartyVendor">vendor.negotiator11@gmail.com</strong>
+                <span class="party-sub">(negotiating with)</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1651,8 +1733,6 @@
         <div class="instruction-label-row">
           <span class="section-label">Natural Language Negotiation Instruction</span>
           <div class="parsed-chips-row" id="parsedChips">
-            <span class="chip chip-buyer">Buyer: <strong>rewardcourt@mermail.app</strong> <span style="opacity: 0.8;">(this agent)</span></span>
-            <span class="chip chip-vendor">Vendor: <strong id="chipVendor">vendor.negotiator11@gmail.com</strong> <span style="opacity: 0.8;">(negotiating with)</span></span>
             <span class="chip">Units: <strong id="chipUnits">100</strong></span>
             <span class="chip">Product: <strong id="chipProduct">Widget X</strong></span>
             <span class="chip">Budget Cap: <strong id="chipBudget">$50.00</strong></span>
@@ -1877,7 +1957,6 @@
     const modalDownloadLink = document.getElementById('modalDownloadLink');
 
     // Dynamic Chips Elements
-    const chipVendor = document.getElementById('chipVendor');
     const chipUnits = document.getElementById('chipUnits');
     const chipProduct = document.getElementById('chipProduct');
     const chipBudget = document.getElementById('chipBudget');
@@ -1893,8 +1972,6 @@
       const budgetMatch = text.match(/(?:budget\s*(?:cap)?|cap)\s*(?:of|is|:)?\s*\$?([0-9]+(?:\.[0-9]+)?)/i);
       const productMatch = text.match(/(?:units?|pieces?|pcs?|items?)\s+of\s+([^,;]+?)(?:,\s*budget|\s+budget|\s+cap|$)/i) || text.match(/(?:for|negotiate for)\s+([^,;]+?)(?:,\s*budget|\s+budget|\s+cap|$)/i);
 
-      const vendorVal = emailMatch ? emailMatch[1] : 'default';
-      chipVendor.textContent = vendorVal;
       const topPartyVendor = document.getElementById('topPartyVendor');
       if (topPartyVendor) {
         topPartyVendor.textContent = emailMatch ? emailMatch[1] : 'vendor.negotiator11@gmail.com';
