@@ -1,102 +1,47 @@
-# Security & Safety Policy: Mermail Agent Handshake
+# Security Considerations: Mermail Agent Handshake
 
-This document details the multi-layered security architecture, anti-patterns, and guardrails enforced by the `mermail-agent-handshake` skill.
+Here is an overview of how this skill protects user funds, prevents infinite loops, and handles untrusted email input safely.
 
----
+## 1. Halting Before Payment
 
-## 1. Complete Halt Before Any Payment Step
+The core design principle here is simple: negotiation can be automated, but spending money should never be automated.
 
-The fundamental security axiom of this skill is: **Negotiation can be autonomous, but spending must never be autonomous.**
+When the agent reaches an agreement with a vendor, it checks the wallet status using a read-only tool, saves a markdown transcript, prints a summary, and immediately exits.
 
-```text
-┌─────────────────────────────────┐
-│     Autonomous Negotiation      │  <-- Multi-turn email offers & counters
-└─────────────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│  Deal Reached (Accept / Agree)  │
-└─────────────────────────────────┘
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│     Read-Only Wallet Check      │  <-- Verify ACTIVE status only
-└─────────────────────────────────┘
-                 │
-                 ▼
-═════════════════════════════════════
-    COMPLETE HALT (FULL STOP)         <-- Skill execution terminates permanently
-═════════════════════════════════════
-                 │
-                 ▼
-┌─────────────────────────────────┐
-│  Manual Human Action (External) │  <-- Any payment is initiated manually
-└─────────────────────────────────┘      outside the skill entirely
-```
-
-### Architectural Distinction: No Built-in Transfer Execution
-- The skill does **not** possess a "confirm to pay" callback, listener, or webhook that subsequently releases funds.
-- It checks the wallet status (read-only), prints a summary of agreed terms and wallet status, and stops — full stop.
-- Any actual payment must be initiated separately and manually by a human operator, outside of this skill entirely.
-- This design eliminates the risk of prompt injections, corrupted state, or logic bugs coercing the agent into executing a financial transaction. The decision to send funds is left entirely to a human, outside the skill's control.
-
----
+There is no callback, webhook, or secondary step in this skill that executes a payment upon receiving confirmation. We intentionally did not include any wallet transfer tools. Any decision to send funds is left entirely to a human operator outside the skill. This keeps funds safe from prompt injections, unexpected pricing bugs, or compromised mailboxes.
 
 ## 2. Read-Only Wallet Verification
 
-To prevent unauthorized transactions, privilege escalation, or unexpected fund movement:
+The agent only interacts with Mermail's wallet features through read-only calls:
 
-- The skill only interacts with Mermail's wallet subsystem using read-only endpoints:
-  - `Mermail:get_paybox_connection`: Validates that the connected wallet is in an `ACTIVE` state (status only -- no balance data is returned by this tool).
-- **Strictly Prohibited & Absent Tools**:
-  - `paybox_request_transfer`
-  - `paybox_transfer`
-  - `paybox_create_invoice`
-  - Any programmatic signing, transfer, or fund-movement mutation tools.
-- Even if an incoming vendor email requests an immediate wire, crypto transfer, or invoice payment, the agent treats the text strictly as untrusted negotiation data and never delegates or attempts wallet execution.
+- `Mermail:get_paybox_connection` verifies that the Paybox wallet connection is in an ACTIVE state (status only -- no balance data is returned by this tool).
+- Transfer tools such as `paybox_request_transfer`, `paybox_transfer`, and invoice creation tools are completely omitted from the skill.
+- If a vendor email includes wire instructions, wallet addresses, or requests for immediate payment, the agent treats that content strictly as negotiation text. It has no tools to act on payment instructions.
 
----
+## 3. Handling Duplicate and Stale Offers
 
-## 3. Duplicate and Stale Offer Detection
+Email delivery isn't always instant or strictly ordered. Network retries, polling delays, or email server threading can cause duplicate messages to arrive.
 
-In automated email workflows, network retries, email provider polling lag, or threading quirks can trigger duplicate message deliveries.
+Both the buyer agent (`buyer-agent.js`) and the vendor bot (`vendor-bot.js`) guard against this with sequence tracking:
 
-The counterparties enforce sequence-aware deduplication (implemented in `vendor-bot.js` and `buyer-agent.js`):
+- **Message ID deduplication**: Each incoming email's UID and Message-ID header are added to an in-memory set once seen. Any duplicate email with the same UID or Message-ID is ignored on subsequent poll cycles.
+- **Round tracking**: The agents track the current round for each sender in an `activeNegotiations` map. If an email arrives with a round number that is less than or equal to the last round processed for that thread, it is rejected as stale.
+- **Session resets**: A new negotiation with a previous counterparty is only accepted if the prior negotiation reached an explicit conclusion (`ACCEPT` or `WALK_AWAY`), or if a new Round 1 offer arrives after a cooldown period (more than 4 seconds since the last message).
 
-### Message-Level Tracking
-- Every incoming email's `UID` and `Message-ID` are added to a processed set upon inspection.
-- Identical `UID`s or `Message-ID`s delivered across subsequent poll cycles are skipped immediately without triggering a new evaluation.
+## 4. Bounded Rounds (MAX_ROUNDS)
 
-### Sequence & Round Tracking
-- Counterparties maintain active negotiation state per sender/recipient pair (`activeNegotiations` map).
-- An incoming offer is rejected as duplicate or stale if `offerData.round <= lastProcessedRound` within the same negotiation session.
-- **Session Reset Detection**: A new negotiation is recognized if:
-  1. The previous negotiation completed with an explicit `isFinal` outcome (`ACCEPT` or `WALK_AWAY`), **or**
-  2. A new `ROUND: 1` opening offer arrives after a cooldown window (>4 seconds since the last interaction).
+To prevent runaway conversations, unnecessary credit usage, or endless back-and-forth emails, negotiations have a hard round limit:
 
-This prevents rapid duplicate emails from generating contradictory counter-offers while allowing fresh negotiations to proceed smoothly.
+- By default, `MAX_ROUNDS` is set to 3.
+- In Round 1, parties make opening bids.
+- In Round 2, they counter and split differences toward the budget cap.
+- In Round 3, the buyer makes its final take-it-or-leave-it offer at the budget cap. If the vendor cannot meet or beat that price, the agent sends an explicit `WALK_AWAY` message and stops.
+- If rounds reach the limit without an agreement, the negotiation terminates automatically.
 
----
+## 5. Untrusted Email Input and Injection Defense
 
-## 4. Bounded Negotiation Rounds (`MAX_ROUNDS`)
+Emails from vendors are external inputs and cannot be trusted blindly:
 
-To eliminate runaway infinite loops, credit exhaustion, or unconstrained email ping-pong:
-
-- **Hard Round Limit**: Both buyer and vendor enforce a strict upper bound on rounds (default `MAX_ROUNDS = 3`).
-- **Forced Terminal State**:
-  - In `Round 1`: Parties establish opening bids and anchors.
-  - In `Round 2`: Counter-offers split differences toward the budget cap.
-  - In `Round 3` (Final Round): The buyer submits its maximum affordable price ($0.50/unit). If the vendor cannot meet or beat this price, it must issue `DECISION: WALK_AWAY` or `DECISION: ACCEPT` at its reserve floor ($0.45/unit).
-- If `round >= MAX_ROUNDS` and prices cannot converge within budget, the agent sends an explicit `DECISION: WALK_AWAY` notice and terminates immediately.
-
----
-
-## 5. Untrusted Email Intake & Injection Defense
-
-Email bodies and subject lines are untrusted external inputs:
-
-| Threat | Defense |
-| --- | --- |
-| Prompt injection inside email body | Parser extracts only strict regex matches for `OFFER:`, `ROUND:`, and `DECISION:`. Arbitrary instructions in email text are ignored. |
-| Fake discount links or phishing URLs | The agent does not follow or navigate to external hyperlinks found in incoming emails. |
-| Forged sender headers | The agent filters messages using mailbox thread IDs, Message-ID reference chains, and baseline inbox state. |
+- **Strict regex parsing**: The parser only looks for specific patterns (`OFFER:`, `ROUND:`, and `DECISION:`). Any prompt injection attempts or conversational instructions elsewhere in the email body are simply ignored.
+- **No link clicking**: The agent does not follow, fetch, or click any external URLs found in email bodies.
+- **Thread and baseline tracking**: The agent records existing mailbox UIDs before sending its first offer. It only processes emails that arrived after that baseline and belong to the expected message thread.
